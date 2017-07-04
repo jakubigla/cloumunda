@@ -1,0 +1,39 @@
+version: '2'
+
+volumes:
+  logs-volume:
+  data-volume:
+
+services:
+  nginx-proxy:
+    image: jwilder/nginx-proxy
+    container_name: nginx-proxy
+    ports:
+      - "80:80"
+    volumes:
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+
+  cloudera:
+    command: /usr/bin/docker-quickstart
+    hostname: quickstart.cloudera
+    image: cloudera/quickstart
+    privileged: true
+    ports:
+     - 8888:8888    # HUE
+     - 11000:11000  # Oozie
+     - 7180:7180    # Cloudera Manager
+     - 8020:8020    # HDFS Namenode
+     - 50070:50070  # HDFS REST Namenode
+     - 10000:10000  # Hive Beeline
+    tty: true
+    volumes:
+      - logs-volume:/var/log
+      - data-volume:/var/lib
+
+  camunda:
+    build: camunda
+    image: ons/camunda
+    hostname: camunda.ons
+    environment:
+      - VIRTUAL_HOST=camunda.ons
+      - VIRTUAL_PORT=8080
