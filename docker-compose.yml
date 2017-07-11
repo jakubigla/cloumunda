@@ -1,8 +1,10 @@
 version: '2'
 
 volumes:
-  logs-volume:
-  data-volume:
+  cloudera-logs-volume:
+  cloudera-data-volume:
+  camunda-conf-volume:
+  pgdata-volume:
 
 services:
   nginx-proxy:
@@ -14,9 +16,10 @@ services:
       - /var/run/docker.sock:/tmp/docker.sock:ro
 
   cloudera:
+    image: ons/cloudera
+    build: cloudera
     command: /usr/bin/docker-quickstart
     hostname: quickstart.cloudera
-    image: cloudera/quickstart
     privileged: true
     ports:
      - 8888:8888    # HUE
@@ -25,15 +28,32 @@ services:
      - 8020:8020    # HDFS Namenode
      - 50070:50070  # HDFS REST Namenode
      - 10000:10000  # Hive Beeline
+     - 8998:8998    # Livy REST
     tty: true
     volumes:
-      - logs-volume:/var/log
-      - data-volume:/var/lib
+      - cloudera-logs-volume:/var/log
+      - cloudera-data-volume:/var/lib
 
   camunda:
     build: camunda
     image: ons/camunda
     hostname: camunda.ons
+    links:
+      - camunda-db:db
+    volumes:
+      - camunda-conf-volume:/camunda/conf
     environment:
       - VIRTUAL_HOST=camunda.ons
       - VIRTUAL_PORT=8080
+      - DB_DRIVER=org.postgresql.Driver
+      - DB_URL=jdbc:postgresql://db:5432/camunda
+      - DB_USERNAME=camunda
+      - DB_PASSWORD=camunda
+
+  camunda-db:
+    image: postgres
+    volumes:
+      - pgdata-volume:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=camunda
+      - POSTGRES_PASSWORD=camunda
